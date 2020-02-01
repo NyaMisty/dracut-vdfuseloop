@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright © 2016-2019 Jonas Kümmerlin <jonas@kuemmerlin.eu>
+# Copyright © 2019-2020 NyaMisty
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -16,35 +17,41 @@
 
 . /lib/dracut-lib.sh
 
-mount_ntfsloop() {
+mount_vdfuseloop() {
     local dev
-    local uuid
-    local path
+    local vdisk
+    local vdloop
 
     dev=$1
-    uuid=$2
-    path=$3
+    vdisk=$2
+    vdloop=$3
 
-    mkdir -p "/run/initramfs/ntfsloop/$uuid/ntfs"
+    mkdir -p "/dev/host"
+    mkdir -p "/dev/vdhost"
+    mkdir -p "/run/initramfs/vdfuse"
 
     if ! ismounted "$dev"; then
-        info "ntfsloop: Mounting $dev onto /run/initramfs/ntfsloop/$uuid/ntfs"
+        info "vdfuseloop: Mounting $dev onto /dev/host"
 
         # mount using ntfs-3g
         # the @ sign is so that systemd doesn't attempt to kill the ntfs-3g process
-        ( exec -a @ntfs-3g ntfs-3g "$dev" "/run/initramfs/ntfsloop/$uuid/ntfs" ) | (while read l; do warn $l; done)
+        ( exec -a @ntfs-3g ntfs-3g "$dev" "/dev/host" ) | (while read l; do warn $l; done)
 
         # create a symlink for the device path - this symlink will survive and
         # be there for the shutdown hook, the mount point won't
-        ln -s "$dev" "/run/initramfs/ntfsloop/$uuid/device"
+        ln -s "$dev" "/run/initramfs/vdfuse/host_device"
     fi
 
     # get the loop device up
-    info "ntfsloop: Creating loop device for $path"
-    kpartx -afv "/run/initramfs/ntfsloop/$uuid/ntfs/$path" | (while read l; do warn $l; done)
-
+    info "vdfuseloop: mounting vmdk /dev/host/$vdisk"
+    ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+    
+    # mount the loop
+    info "vdfuseloop: Creating loop device for $vdloop"
+    ( loopdev=`losetup -f`; losetup ${loopdev} "${vdloop#/}"; ln -s $loopdev /dev/rootfsloop ) | (while read l; do warn $l; done)
+    
     # make sure our shutdown script runs
     need_shutdown
 }
 
-mount_ntfsloop "$@"
+mount_vdfuseloop "$@"

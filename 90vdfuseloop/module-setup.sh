@@ -14,19 +14,26 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-umount_ntfsloop() {
-    local p
+command -v
 
-    for p in /run/initramfs/ntfsloop/*; do
-        warn "Umounting ntfsloop $p"
-
-        # shutdown the loop device
-        #FIXME: we don't know which one, so we just kill them all
-        losetup -D
-
-        # umount the ntfs partition
-        umount "$p/device" | (while read l; do warn "$l"; done)
-    done
+check() {
+    return 0
 }
 
-umount_ntfsloop
+depends() {
+    echo base dm shutdown
+    return 0
+}
+
+install() {
+    inst_multiple ntfs-3g umount losetup vdfuse
+    inst_script "$moddir/vdfuseloop.sh" /sbin/vdfuseloop
+    inst_hook cmdline 90 "$moddir/parse-vdfuseloop.sh"
+    inst_hook mount 30 "$moddir/mount-loop.sh"
+    inst_hook pre-shutdown 30 "$moddir/shutdown-vdfuseloop.sh"
+    dracut_need_initqueue
+}
+
+installkernel() {
+    hostonly='' instmods fuse loop vboxdrv
+}
