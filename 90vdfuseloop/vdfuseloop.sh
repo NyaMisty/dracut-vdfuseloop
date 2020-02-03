@@ -50,6 +50,7 @@ mount_vdfuseloop() {
     else
         snapshot_vdisk=${vdisk%/*}/$snapshot
         ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" -s "/dev/host/$snapshot_vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+    fi
     
     # mount the loop
     info "vdfuseloop: Creating loop device for $vdloop"
