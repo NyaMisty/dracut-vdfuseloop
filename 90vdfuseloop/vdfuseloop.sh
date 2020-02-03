@@ -25,6 +25,7 @@ mount_vdfuseloop() {
     dev=$1
     vdisk=$2
     vdloop=$3
+    snapshot=$4
 
     mkdir -p "/dev/host"
     mkdir -p "/dev/vdhost"
@@ -44,7 +45,11 @@ mount_vdfuseloop() {
 
     # get the loop device up
     info "vdfuseloop: mounting vmdk /dev/host/$vdisk"
-    ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+    if [ -z $snapshot ]; then
+        ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+    else
+        snapshot_vdisk=${vdisk%/?}/$snapshot
+        ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" -s "/dev/host/$snapshot_vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
     
     # mount the loop
     info "vdfuseloop: Creating loop device for $vdloop"

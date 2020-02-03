@@ -25,6 +25,7 @@ parse_vdfuseloop() {
     dev=$(getargs rd.hostdev=)
     vdisk=$(getargs rd.vdisk=)
     vdloop=$(getargs rd.vdloop=)
+    snapshot=$(getargs rd.snapshot=)
     
     if [ -z "$dev" ] || [ -z "$vdisk" ] || [ -z "$vdloop" ]
     then
@@ -43,7 +44,7 @@ parse_vdfuseloop() {
 
         printf 'RUN+="%s --settled --onetime ' $(command -v initqueue)
         printf '%s ' $(command -v vdfuseloop)
-        printf '$env{DEVNAME} '\''%s'\'' '\''%s'\''"\n\n' $vdisk $vdloop
+        printf '$env{DEVNAME} '\''%s'\'' '\''%s'\'' '\''%s'\''"\n\n' $vdisk $vdloop $snapshot
     } >> /etc/udev/rules.d/90-vdfuseloop.rules
     
     wait_for_dev /dev/rootfsloop
