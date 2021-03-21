@@ -45,11 +45,21 @@ mount_vdfuseloop() {
 
     # get the loop device up
     info "vdfuseloop: mounting vmdk /dev/host/$vdisk"
-    if [ -z $snapshot ] || [ $snapshot = ${vdisk##/*/} ]; then
+    if [ -z "$snapshot" ] || [ "$snapshot" = ${vdisk##/*/} ]; then
         ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
     else
-        snapshot_vdisk=${vdisk%/*}/$snapshot
-        ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" -s "/dev/host/$snapshot_vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+        snapshot_args=""
+        first_disk=""
+        for s in $snapshot; do
+            if [ -z $first_disk ]; then
+                first_disk=$s
+            else
+                snapshot_args="${snapshot_args} -s /dev/host/${vdisk%/*}/$s"
+            fi
+        done
+        #snapshot_vdisk=${vdisk%/*}/$snapshot
+        #( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" -s "/dev/host/$snapshot_vdisk" "/dev/vdhost") | (while read l; do warn $l; done)
+        ( exec -a @vdfuse vdfuse -f "/dev/host/$vdisk" $snapshot_args "/dev/vdhost") | (while read l; do warn $l; done)
     fi
     
     # mount the loop
